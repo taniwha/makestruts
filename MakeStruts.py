@@ -117,6 +117,7 @@ class SVert:
 
 class SEdge:
     def __init__(self, bmesh, bmedge):
+        self.index = bmedge.index
         self.verts = (SVert (bmedge.verts[0], bmedge),
                       SVert (bmedge.verts[1], bmedge))
         self.y = (bmesh.verts[self.verts[0].index].co
@@ -177,7 +178,17 @@ def make_manifold_struts(truss_obj, id, od, segments):
                     edge_set.remove(edge)
                     edge_queue.append(edge)
                     calc_edge_frame(edge, current_edge)
-    verts = faces = []
+    verts = []
+    faces = []
+    for e, edge in enumerate (edges):
+        v = [truss_mesh.verts[edge.verts[0].index].co,
+             truss_mesh.verts[edge.verts[1].index].co,
+             None, None]
+        v[2] = v[1] + edge.z * 0.1
+        v[3] = v[0] + edge.z * 0.1
+        f = [e * 4 + 0, e * 4 + 1, e * 4 + 2, e * 4 + 3]
+        verts += v
+        faces.append(f)
     return verts, faces
 
 def make_simple_struts(truss_mesh, id, od, segments, solid, loops):
