@@ -26,7 +26,7 @@
 bl_info = {
     "name": "Strut Generator",
     "author": "Bill Currie",
-    "blender": (2, 6, 2),
+    "blender": (2, 6, 3),
     "api": 35622,
     "location": "View3D > Add > Mesh > Struts",
     "description": "Add struts meshes based on selected truss meshes",
@@ -36,6 +36,7 @@ bl_info = {
     "category": "Add Mesh"}
 
 import bpy
+import bmesh
 from bpy.props import FloatProperty,IntProperty,BoolProperty
 from mathutils import Vector,Matrix
 from math import pi, cos, sin
@@ -104,8 +105,14 @@ def make_strut(v1, v2, id, od, n, solid, loops):
     #print(verts,faces)
     return verts, faces
 
-def create_struts(self, context, id, od, segments, solid, loops):
-    build_cossin(segments)
+def make_manifold_struts():
+    bpy.context.scene.objects.active = truss_obj
+    bpy.ops.object.editmode_toggle()
+    truss_mesh = bmesh.from_edit_mesh(truss_mesh).copy()
+    bpy.ops.object.editmode_toggle()
+    pass
+
+def make_simple_struts(truss_mesh, id, od, segments, solid, loops):
     vps = 2
     if solid:
         vps *= 2
@@ -115,6 +122,31 @@ def create_struts(self, context, id, od, segments, solid, loops):
     if not solid:
         fps -= 1
 
+    verts = [None] * len(truss_mesh.edges) * segments * vps
+    faces = [None] * len(truss_mesh.edges) * segments * fps
+    vbase = 0
+    fbase = 0
+    for e in truss_mesh.edges:
+        v1 = truss_mesh.vertices[e.vertices[0]]
+        v2 = truss_mesh.vertices[e.vertices[1]]
+        v, f = make_strut(v1.co, v2.co, id, od, segments, solid, loops)
+        for fv in f:
+            for i in range(len(fv)):
+                fv[i] += vbase
+        for i in range(len(v)):
+            verts[vbase + i] = v[i]
+        for i in range(len(f)):
+            faces[fbase + i] = f[i]
+        #if not base % 12800:
+        #    print (base * 100 / len(verts))
+        vbase += vps * segments
+        fbase += fps * segments
+    #print(verts,faces)
+    return verts, faces
+
+def create_struts(self, context, id, od, segments, solid, loops, manifold):
+    build_cossin(segments)
+
     bpy.context.user_preferences.edit.use_global_undo = False
     for truss_obj in bpy.context.scene.objects:
         if not truss_obj.select:
@@ -123,28 +155,12 @@ def create_struts(self, context, id, od, segments, solid, loops):
         truss_mesh = truss_obj.to_mesh(context.scene, True, 'PREVIEW')
         if not truss_mesh.edges:
             continue
+        if manifold:
+            make_manifold_struts()
+        else:
+            verts, faces = make_simple_struts(truss_mesh, id, od, segments,
+                                              solid, loops)
         mesh = bpy.data.meshes.new("Struts")
-    
-        verts = [None] * len(truss_mesh.edges) * segments * vps
-        faces = [None] * len(truss_mesh.edges) * segments * fps
-        vbase = 0
-        fbase = 0
-        for e in truss_mesh.edges:
-            v1 = truss_mesh.vertices[e.vertices[0]]
-            v2 = truss_mesh.vertices[e.vertices[1]]
-            v, f = make_strut(v1.co, v2.co, id, od, segments, solid, loops)
-            for fv in f:
-                for i in range(len(fv)):
-                    fv[i] += vbase
-            for i in range(len(v)):
-                verts[vbase + i] = v[i]
-            for i in range(len(f)):
-                faces[fbase + i] = f[i]
-            #if not base % 12800:
-            #    print (base * 100 / len(verts))
-            vbase += vps * segments
-            fbase += fps * segments
-        #print(verts,faces)
         mesh.from_pydata(verts, [], faces)
         obj = bpy.data.objects.new("Struts", mesh)
         bpy.context.scene.objects.link(obj)
@@ -152,7 +168,7 @@ def create_struts(self, context, id, od, segments, solid, loops):
         obj.location = truss_obj.location
         bpy.context.scene.objects.active = obj
         mesh.update()
-        bpy.context.user_preferences.edit.use_global_undo = True
+    bpy.context.user_preferences.edit.use_global_undo = True
     return {'FINISHED'}
 
 class Struts(bpy.types.Operator):
@@ -176,9 +192,12 @@ class Struts(bpy.types.Operator):
                        max = 100,
                        soft_max = 100,
                        default = 0.05)
+    manifold = BoolProperty(name="Manifold",
+                         description="Connect struts to form a single solid.",
+                         default=False)
     solid = BoolProperty(name="Solid",
                          description="Create inner surface.",
-                         default=True)
+                         default=False)
     loops = BoolProperty(name="Loops",
                          description="Create sub-surf friendly loops.",
                          default=False)
