@@ -38,7 +38,7 @@ bl_info = {
 import bpy
 import bmesh
 from bpy.props import FloatProperty,IntProperty,BoolProperty
-from mathutils import Vector,Matrix
+from mathutils import Vector,Matrix,Quaternion
 from math import pi, cos, sin
 
 cossin = []
@@ -50,6 +50,13 @@ def build_cossin(n):
         a = 2 * pi * i / n
         cossin.append((cos(a), sin(a)))
 
+def select_up(axis):
+    if (abs(axis[0] / axis.length) < 1e-5
+        and abs(axis[1] / axis.length) < 1e-5):
+        up = Vector((-1, 0, 0))
+    else:
+        up = Vector((0, 0, 1))
+    return up
 
 def make_strut(v1, v2, id, od, n, solid, loops):
     v1 = Vector(v1)
@@ -72,11 +79,7 @@ def make_strut(v1, v2, id, od, n, solid, loops):
         fps -= 1
     fw = axis.copy()
     fw.normalize()
-    if (abs(axis[0] / axis.length) < 1e-5
-        and abs(axis[1] / axis.length) < 1e-5):
-        up = Vector((-1, 0, 0))
-    else:
-        up = Vector((0, 0, 1))
+    up = select_up(axis)
     lf = up.cross(fw)
     lf.normalize()
     up = fw.cross(lf)
@@ -105,12 +108,77 @@ def make_strut(v1, v2, id, od, n, solid, loops):
     #print(verts,faces)
     return verts, faces
 
-def make_manifold_struts():
+class SVert:
+    def __init__(self, bmvert, bmedge):
+        self.index = bmvert.index
+        edges = bmvert.link_edges[:]
+        edges.remove(bmedge)
+        self.edges = tuple(map(lambda e: e.index, edges))
+
+class SEdge:
+    def __init__(self, bmesh, bmedge):
+        self.verts = (SVert (bmedge.verts[0], bmedge),
+                      SVert (bmedge.verts[1], bmedge))
+        self.y = (bmesh.verts[self.verts[0].index].co
+                  - bmesh.verts[self.verts[1].index].co)
+        self.y.normalize()
+        self.x = self.z = None
+
+def set_edge_frame(edge, up):
+    edge.x = edge.y.cross(up)
+    edge.x.normalize()
+    edge.z = edge.x.cross(edge.y)
+
+def calc_edge_frame(edge, base_edge):
+    baxis = base_edge.y
+    if (edge.verts[0].index == base_edge.verts[0].index
+        or edge.verts[1].index == base_edge.verts[1].index):
+        axis = -edge.y
+    elif (edge.verts[0].index == base_edge.verts[1].index
+          or edge.verts[1].index == base_edge.verts[0].index):
+        axis = edge.y
+    else:
+        raise ValueError("edges not connected")
+    if baxis.dot(axis) in (-1, 1):
+        # aligned axis have their up/z aligned
+        up = base_edge.z
+    else:
+        # Get the unit vector dividing the angle (theta) between baxis and axis
+        # in two equal parts
+        h = (baxis + axis)
+        h.normalize()
+        # (cos(theta/2), sin(theta/2) * n) where n is the unit vector of the
+        # axis rotating baxis onto axis
+        q = Quaternion([baxis.dot (h)] + list(baxis.cross(h)))
+        # rotate the base edge's up around the rotation axis (blender
+        # quaternion shortcut:)
+        up = q * base_edge.z
+    set_edge_frame(edge, up)
+
+def make_manifold_struts(truss_obj, id, od, segments):
     bpy.context.scene.objects.active = truss_obj
     bpy.ops.object.editmode_toggle()
-    truss_mesh = bmesh.from_edit_mesh(truss_mesh).copy()
+    truss_mesh = bmesh.from_edit_mesh(truss_obj.data).copy()
     bpy.ops.object.editmode_toggle()
-    pass
+    edges = [None] * len(truss_mesh.edges)
+    for i,e in enumerate(truss_mesh.edges):
+        edges[i] = SEdge(truss_mesh, e)
+    edge_set = set(edges)
+    while edge_set:
+        edge_queue=[edge_set.pop()]
+        set_edge_frame(edge_queue[0], select_up(edge_queue[0].y))
+        while edge_queue:
+            current_edge = edge_queue.pop()
+            for i in (0, 1):
+                for e in current_edge.verts[i].edges:
+                    edge = edges[e]
+                    if edge.x != None:  #edge already processed
+                        continue
+                    edge_set.remove(edge)
+                    edge_queue.append(edge)
+                    calc_edge_frame(edge, current_edge)
+    verts = faces = []
+    return verts, faces
 
 def make_simple_struts(truss_mesh, id, od, segments, solid, loops):
     vps = 2
@@ -156,7 +224,7 @@ def create_struts(self, context, id, od, segments, solid, loops, manifold):
         if not truss_mesh.edges:
             continue
         if manifold:
-            make_manifold_struts()
+            verts, faces = make_manifold_struts(truss_obj, id, od, segments)
         else:
             verts, faces = make_simple_struts(truss_mesh, id, od, segments,
                                               solid, loops)
