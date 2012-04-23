@@ -171,8 +171,8 @@ class Struts(bpy.types.Operator):
                        default = 0.04)
     od = FloatProperty(name = "Outside Diameter",
                        description = "diameter of outer surface",
-                       min = 0.01,
-                       soft_min = 0.01,
+                       min = 0.001,
+                       soft_min = 0.001,
                        max = 100,
                        soft_max = 100,
                        default = 0.05)
@@ -186,7 +186,7 @@ class Struts(bpy.types.Operator):
                            description="Number of segments around strut",
                            min=3, soft_min=3,
                            max=64, soft_max=64,
-                           default=32)
+                           default=12)
 
     def execute(self, context):
         keywords = self.as_keywords ()
