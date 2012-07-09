@@ -166,7 +166,7 @@ def calc_edge_frame(edge, base_edge):
         up = q * base_edge.z
     set_edge_frame(edge, up)
 
-def make_manifold_struts(truss_obj, id, od, segments):
+def make_manifold_struts(truss_obj, od, segments):
     bpy.context.scene.objects.active = truss_obj
     bpy.ops.object.editmode_toggle()
     truss_mesh = bmesh.from_edit_mesh(truss_obj.data).copy()
@@ -240,7 +240,7 @@ def create_struts(self, context, id, od, segments, solid, loops, manifold):
         if not truss_mesh.edges:
             continue
         if manifold:
-            verts, faces = make_manifold_struts(truss_obj, id, od, segments)
+            verts, faces = make_manifold_struts(truss_obj, od, segments)
         else:
             verts, faces = make_simple_struts(truss_mesh, id, od, segments,
                                               solid, loops)
