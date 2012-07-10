@@ -108,6 +108,16 @@ def make_strut(v1, v2, id, od, n, solid, loops):
     #print(verts,faces)
     return verts, faces
 
+def project_point(point, dir, norm, p):
+    d = (point - p).dot(norm)
+    if d <= 0:
+        #the point is already on or behind the plane
+        return point
+    v = dir.dot(norm)
+    if v >= 0:
+        #the plane is unreachable
+        return point
+    return point - dir / v
 
 def make_debug_plane(mesh, edge_num, edge, od):
     v = [mesh.verts[edge.verts[0].index].co,
@@ -118,6 +128,42 @@ def make_debug_plane(mesh, edge_num, edge, od):
     f = [[edge_num * 4 + 0, edge_num * 4 + 1,
           edge_num * 4 + 2, edge_num * 4 + 3]]
     return v, f
+
+def calc_edge_vert_planes(edges, edge):
+    for v in edge.verts:
+        v.planes = []
+        for ed in v.edges:
+            v.planes.append (calc_plane_normal(edge, edges[ed]))
+
+def make_clipped_cylinder(mesh, edge_num, edge, od):
+    n = len(cossin)
+    cyl = [None] * n
+    v0 = mesh.verts[edge.verts[0].index].co
+    c0 = v0 - od * edge.y
+    v1 = mesh.verts[edge.verts[1].index].co
+    c1 = v1 + od * edge.y
+    for i in range(n):
+        x = cossin[i][0]
+        y = cossin[i][1]
+        r = (edge.x * x + edge.z * y) * od
+        cyl[i] = [c0 + r, c1 + r]
+        for p in edge.verts[0].planes:
+            cyl[i][0] = project_point(cyl[i][0], edge.y, p, v0)
+        for p in edge.verts[1].planes:
+            cyl[i][1] = project_point(cyl[i][1], -edge.y, p, v1)
+    v = [None] * n * 2
+    f = [None] * n
+    base = edge_num * n * 2
+    for i in range(n):
+        v[i * 2 + 0] = cyl[i][0]
+        v[i * 2 + 1] = cyl[i][1]
+        f[i] = [None] * 4
+        f[i][0] = base + i * 2 + 0
+        f[i][1] = base + i * 2 + 1
+        f[i][2] = base + (i * 2 + 3) % (n * 2)
+        f[i][3] = base + (i * 2 + 2) % (n * 2)
+    return v, f
+
 class SVert:
     def __init__(self, bmvert, bmedge):
         self.index = bmvert.index
@@ -166,6 +212,23 @@ def calc_edge_frame(edge, base_edge):
         up = q * base_edge.z
     set_edge_frame(edge, up)
 
+def calc_plane_normal(edge1, edge2):
+    if edge1.verts[0].index == edge2.verts[0].index:
+        axis1 = -edge1.y
+        axis2 = edge2.y
+    elif edge1.verts[1].index == edge2.verts[1].index:
+        axis1 = edge1.y
+        axis2 = -edge2.y
+    elif edge1.verts[0].index == edge2.verts[1].index:
+        axis1 = -edge1.y
+        axis2 = -edge2.y
+    elif edge1.verts[1].index == edge2.verts[0].index:
+        axis1 = edge1.y
+        axis2 = edge2.y
+    else:
+        raise ValueError("edges not connected")
+    return (axis1 + axis2).normalized()
+
 def make_manifold_struts(truss_obj, od, segments):
     bpy.context.scene.objects.active = truss_obj
     bpy.ops.object.editmode_toggle()
@@ -191,7 +254,9 @@ def make_manifold_struts(truss_obj, od, segments):
     verts = []
     faces = []
     for e, edge in enumerate (edges):
-        v, f = make_debug_plane(truss_mesh, e, edge, od)
+        #v, f = make_debug_plane(truss_mesh, e, edge, od)
+        calc_edge_vert_planes (edges, edge)
+        v, f = make_clipped_cylinder(truss_mesh, e, edge, od)
         verts += v
         faces += f
     return verts, faces
