@@ -257,37 +257,35 @@ class SEdge:
                   - bmesh.verts[self.verts[1].index].co)
         self.y.normalize()
         self.x = self.z = None
-
-def set_edge_frame(edge, up):
-    edge.x = edge.y.cross(up)
-    edge.x.normalize()
-    edge.z = edge.x.cross(edge.y)
-
-def calc_edge_frame(edge, base_edge):
-    baxis = base_edge.y
-    if (edge.verts[0].index == base_edge.verts[0].index
-        or edge.verts[1].index == base_edge.verts[1].index):
-        axis = -edge.y
-    elif (edge.verts[0].index == base_edge.verts[1].index
-          or edge.verts[1].index == base_edge.verts[0].index):
-        axis = edge.y
-    else:
-        raise ValueError("edges not connected")
-    if baxis.dot(axis) in (-1, 1):
-        # aligned axis have their up/z aligned
-        up = base_edge.z
-    else:
-        # Get the unit vector dividing the angle (theta) between baxis and axis
-        # in two equal parts
-        h = (baxis + axis)
-        h.normalize()
-        # (cos(theta/2), sin(theta/2) * n) where n is the unit vector of the
-        # axis rotating baxis onto axis
-        q = Quaternion([baxis.dot (h)] + list(baxis.cross(h)))
-        # rotate the base edge's up around the rotation axis (blender
-        # quaternion shortcut:)
-        up = q * base_edge.z
-    set_edge_frame(edge, up)
+    def set_frame(self, up):
+        self.x = self.y.cross(up)
+        self.x.normalize()
+        self.z = self.x.cross(self.y)
+    def calc_frame(self, base_edge):
+        baxis = base_edge.y
+        if (self.verts[0].index == base_edge.verts[0].index
+            or self.verts[1].index == base_edge.verts[1].index):
+            axis = -self.y
+        elif (self.verts[0].index == base_edge.verts[1].index
+              or self.verts[1].index == base_edge.verts[0].index):
+            axis = self.y
+        else:
+            raise ValueError("edges not connected")
+        if baxis.dot(axis) in (-1, 1):
+            # aligned axis have their up/z aligned
+            up = base_edge.z
+        else:
+            # Get the unit vector dividing the angle (theta) between baxis and axis
+            # in two equal parts
+            h = (baxis + axis)
+            h.normalize()
+            # (cos(theta/2), sin(theta/2) * n) where n is the unit vector of the
+            # axis rotating baxis onto axis
+            q = Quaternion([baxis.dot (h)] + list(baxis.cross(h)))
+            # rotate the base edge's up around the rotation axis (blender
+            # quaternion shortcut:)
+            up = q * base_edge.z
+        self.set_frame(up)
 
 def calc_plane_normal(edge1, edge2):
     if edge1.verts[0].index == edge2.verts[0].index:
@@ -317,7 +315,7 @@ def make_manifold_struts(truss_obj, od, segments):
     edge_set = set(edges)
     while edge_set:
         edge_queue=[edge_set.pop()]
-        set_edge_frame(edge_queue[0], select_up(edge_queue[0].y))
+        edge_queue[0].set_frame(select_up(edge_queue[0].y))
         while edge_queue:
             current_edge = edge_queue.pop()
             for i in (0, 1):
@@ -327,7 +325,7 @@ def make_manifold_struts(truss_obj, od, segments):
                         continue
                     edge_set.remove(edge)
                     edge_queue.append(edge)
-                    calc_edge_frame(edge, current_edge)
+                    edge.calc_frame(current_edge)
     verts = []
     faces = []
     for e, edge in enumerate (edges):
