@@ -145,7 +145,7 @@ def make_clipped_cylinder(mesh, edge_num, edge, od):
     for i in range(n):
         x = cossin[i][0]
         y = cossin[i][1]
-        r = (edge.x * x + edge.z * y) * od
+        r = (edge.x * x + edge.z * y) * od / 2
         cyl[i] = [c0 + r, c1 + r]
         for p in edge.verts[0].planes:
             cyl[i][0] = project_point(cyl[i][0], edge.y, p, v0)
