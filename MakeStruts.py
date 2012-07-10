@@ -235,7 +235,22 @@ def make_clipped_cylinder(mesh, edge_num, edge, od):
         f[i][3] = base + (i * 2 + 2) % (n * 2)
     return v, f
 
+##  Represent a vertex in the base mesh, with additional information.
+#
+#   These vertices are @b not shared between edges.
+#
+#   @var index  The index of the vert in the base mesh
+#   @var edge   The edge to which this vertex is attached.
+#   @var edges  A list of bmesh edges attached to this vert, not including the
+#               edge to which this vertex is attached.
+#   @var planes List of vectors representing the normals of the planes that
+#               bisect the angle between this vert's edge and each other
+#               adjacant edge.
 class SVert:
+    ##  Create a vertex holding additional information about the bmesh vertex.
+    #   @param bmvert   The bmesh vertex for which additional information is
+    #                   to be stored.
+    #   @param bmedge   The edge to which this vertex is attached.
     def __init__(self, bmvert, bmedge, edge):
         self.index = bmvert.index
         self.edge = edge
@@ -247,6 +262,18 @@ class SVert:
         for ed in self.edges:
             self.planes.append (calc_plane_normal(self.edge, edges[ed]))
 
+##  Represent an edge in the base mesh, with additional information.
+#
+#   @var index      The index of the edge in the base mesh.
+#   @var verts      A tuple of 2 SVert vertices, one for each end of the
+#                   edge. The vertices are @b not shared between edges.
+#   @var x          The x axis of the edges local frame of reference.
+#                   Initially invalid.
+#   @var y          The y axis of the edges local frame of reference.
+#                   Initialized such that the edge runs from verts[0] to
+#                   verts[1] along the negative y axis.
+#   @var z          The z axis of the edges local frame of reference.
+#                   Initially invalid.
 class SEdge:
     def __init__(self, bmesh, bmedge):
         self.index = bmedge.index
