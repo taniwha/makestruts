@@ -194,7 +194,6 @@ def make_debug_strut(mesh, edge_num, edge, od):
 
 def calc_edge_vert_planes(edges, edge):
     for v in edge.verts:
-        v.planes = []
         for ed in v.edges:
             v.planes.append (calc_plane_normal(edge, edges[ed]))
 
@@ -247,6 +246,7 @@ class SVert:
         edges = bmvert.link_edges[:]
         edges.remove(bmedge)
         self.edges = tuple(map(lambda e: e.index, edges))
+        self.planes = []
 
 class SEdge:
     def __init__(self, bmesh, bmedge):
