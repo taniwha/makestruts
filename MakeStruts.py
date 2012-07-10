@@ -110,14 +110,14 @@ def make_strut(v1, v2, id, od, n, solid, loops):
 
 def project_point(point, dir, norm, p):
     d = (point - p).dot(norm)
-    if d <= 0:
-        #the point is already on or behind the plane
+    if d >= 0:
+        #the point is already on or in front of the plane
         return point
     v = dir.dot(norm)
-    if v >= 0:
+    if v * v < 1e-8:
         #the plane is unreachable
         return point
-    return point - dir / v
+    return point - dir * d / v
 
 def make_debug_plane(mesh, edge_num, edge, od):
     v = [mesh.verts[edge.verts[0].index].co,
@@ -139,9 +139,9 @@ def make_clipped_cylinder(mesh, edge_num, edge, od):
     n = len(cossin)
     cyl = [None] * n
     v0 = mesh.verts[edge.verts[0].index].co
-    c0 = v0 - od * edge.y
+    c0 = v0 + od * edge.y
     v1 = mesh.verts[edge.verts[1].index].co
-    c1 = v1 + od * edge.y
+    c1 = v1 - od * edge.y
     for i in range(n):
         x = cossin[i][0]
         y = cossin[i][1]
