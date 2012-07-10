@@ -192,11 +192,6 @@ def make_debug_strut(mesh, edge_num, edge, od):
           edge_num * 4 + 2, edge_num * 4 + 3]]
     return v, f
 
-def calc_edge_vert_planes(edges, edge):
-    for v in edge.verts:
-        for ed in v.edges:
-            v.planes.append (calc_plane_normal(edge, edges[ed]))
-
 ##  Make a cylinder with ends clipped to the end-planes of the edge.
 #
 #   The strut is just a single quad representing the Z axis of the edge.
@@ -241,18 +236,22 @@ def make_clipped_cylinder(mesh, edge_num, edge, od):
     return v, f
 
 class SVert:
-    def __init__(self, bmvert, bmedge):
+    def __init__(self, bmvert, bmedge, edge):
         self.index = bmvert.index
+        self.edge = edge
         edges = bmvert.link_edges[:]
         edges.remove(bmedge)
         self.edges = tuple(map(lambda e: e.index, edges))
         self.planes = []
+    def calc_planes(self, edges):
+        for ed in self.edges:
+            self.planes.append (calc_plane_normal(self.edge, edges[ed]))
 
 class SEdge:
     def __init__(self, bmesh, bmedge):
         self.index = bmedge.index
-        self.verts = (SVert (bmedge.verts[0], bmedge),
-                      SVert (bmedge.verts[1], bmedge))
+        self.verts = (SVert (bmedge.verts[0], bmedge, self),
+                      SVert (bmedge.verts[1], bmedge, self))
         self.y = (bmesh.verts[self.verts[0].index].co
                   - bmesh.verts[self.verts[1].index].co)
         self.y.normalize()
@@ -275,8 +274,8 @@ class SEdge:
             # aligned axis have their up/z aligned
             up = base_edge.z
         else:
-            # Get the unit vector dividing the angle (theta) between baxis and axis
-            # in two equal parts
+            # Get the unit vector dividing the angle (theta) between baxis and
+            # axis in two equal parts
             h = (baxis + axis)
             h.normalize()
             # (cos(theta/2), sin(theta/2) * n) where n is the unit vector of the
@@ -286,6 +285,9 @@ class SEdge:
             # quaternion shortcut:)
             up = q * base_edge.z
         self.set_frame(up)
+    def calc_vert_planes(self, edges):
+        for v in self.verts:
+            v.calc_planes (edges)
 
 def calc_plane_normal(edge1, edge2):
     if edge1.verts[0].index == edge2.verts[0].index:
@@ -330,7 +332,7 @@ def make_manifold_struts(truss_obj, od, segments):
     faces = []
     for e, edge in enumerate (edges):
         #v, f = make_debug_strut(truss_mesh, e, edge, od)
-        calc_edge_vert_planes (edges, edge)
+        edge.calc_vert_planes (edges)
         v, f = make_clipped_cylinder(truss_mesh, e, edge, od)
         verts += v
         faces += f
