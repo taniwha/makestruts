@@ -119,12 +119,26 @@ def project_point(point, dir, norm, p):
         return point
     return point - dir * d / v
 
+##  Make a simple strut for debugging.
+#
+#   The strut is just a single quad representing the Z axis of the edge.
+#
+#   @param mesh     The base mesh. Used for finding the edge vertices.
+#   @param edge_num The number of the current edge. For the face vertex
+#                   indices.
+#   @param edge     The edge for which the strut will be built.
+#   @param od       Twice the width of the strut.
+#   @return         A tuple containing a list of vertices and a list of faces.
+#                   The face vertex indices are pre-adjusted by the edge
+#                   number.
+#   @fixme          The face vertex indices should be accurate for the local
+#                   vertices (consistency)
 def make_debug_strut(mesh, edge_num, edge, od):
     v = [mesh.verts[edge.verts[0].index].co,
          mesh.verts[edge.verts[1].index].co,
          None, None]
-    v[2] = v[1] + edge.z * 0.1
-    v[3] = v[0] + edge.z * 0.1
+    v[2] = v[1] + edge.z * od / 2
+    v[3] = v[0] + edge.z * od / 2
     f = [[edge_num * 4 + 0, edge_num * 4 + 1,
           edge_num * 4 + 2, edge_num * 4 + 3]]
     return v, f
