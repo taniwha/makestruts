@@ -155,8 +155,8 @@ def make_clipped_cylinder(mesh, edge_num, edge, od):
     f = [None] * n
     base = edge_num * n * 2
     for i in range(n):
-        v[i * 2 + 0] = cyl[i][0]
-        v[i * 2 + 1] = cyl[i][1]
+        v[i * 2 + 0] = cyl[i][1]
+        v[i * 2 + 1] = cyl[i][0]
         f[i] = [None] * 4
         f[i][0] = base + i * 2 + 0
         f[i][1] = base + i * 2 + 1
