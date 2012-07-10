@@ -115,8 +115,8 @@ def make_debug_plane(mesh, edge_num, edge, od):
          None, None]
     v[2] = v[1] + edge.z * 0.1
     v[3] = v[0] + edge.z * 0.1
-    f = [edge_num * 4 + 0, edge_num * 4 + 1,
-         edge_num * 4 + 2, edge_num * 4 + 3]
+    f = [[edge_num * 4 + 0, edge_num * 4 + 1,
+          edge_num * 4 + 2, edge_num * 4 + 3]]
     return v, f
 class SVert:
     def __init__(self, bmvert, bmedge):
@@ -193,7 +193,7 @@ def make_manifold_struts(truss_obj, od, segments):
     for e, edge in enumerate (edges):
         v, f = make_debug_plane(truss_mesh, e, edge, od)
         verts += v
-        faces.append(f)
+        faces += f
     return verts, faces
 
 def make_simple_struts(truss_mesh, id, od, segments, solid, loops):
