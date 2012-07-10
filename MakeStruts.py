@@ -43,6 +43,11 @@ from math import pi, cos, sin
 
 cossin = []
 
+##  Initialize the cossin table based on the number of segments.
+#
+#   @param n        The number of segments into which the circle will be
+#                   divided.
+#   @return         None
 def build_cossin(n):
     global cossin
     cossin = []
@@ -58,6 +63,36 @@ def select_up(axis):
         up = Vector((0, 0, 1))
     return up
 
+##  Make a single strut in non-manifold mode.
+#
+#   The strut will be a "cylinder" with @a n sides. The vertices of the
+#   cylinder will be @a od / 2 from the center of the cylinder. Optionally,
+#   extra loops will be placed (@a od - @a id) / 2 from either end. The
+#   strut will be either a simple, open-ended single-surface "cylinder", or a
+#   double walled "pipe" with the outer wall vertices @a od / 2 from the center
+#   and the inner wall vertices @a id / 2 from the center. The two walls will
+#   be joined together at the ends with a face ring such that the entire strut
+#   is a manifold object. All faces of the strut will be quads.
+#
+#   @param v1       Vertex representing one end of the strut's center-line.
+#   @param v2       Vertex representing the other end of the strut's
+#                   center-line.
+#   @param id       The diameter of the inner wall of a solid strut. Used for
+#                   calculating the position of the extra loops irrespective
+#                   of the solidity of the strut.
+#   @param od       The diameter of the outer wall of a solid strut, or the
+#                   diameter of a non-solid strut.
+#   @param solid    If true, the strut will be made solid such that it has an
+#                   inner wall (diameter @a id), an outer wall (diameter
+#                   @a od), and face rings at either end of the strut such
+#                   the strut is a manifold object. If false, the strut is
+#                   a simple, open-ended "cylinder".
+#   @param loops    If true, edge loops will be placed at either end of the
+#                   strut, (@a od - @a id) / 2 from the end of the strut. The
+#                   loops make subsurfed solid struts work nicely.
+#   @return         A tuple containing a list of vertices and a list of faces.
+#                   The face vertex indices are accurate only for the list of
+#                   vertices for the created strut.
 def make_strut(v1, v2, id, od, n, solid, loops):
     v1 = Vector(v1)
     v2 = Vector(v2)
@@ -108,6 +143,20 @@ def make_strut(v1, v2, id, od, n, solid, loops):
     #print(verts,faces)
     return verts, faces
 
+##  Project a point along a vector onto a plane.
+#
+#   Really, just find the intersection of the line represented by @a point
+#   and @a dir with the plane represented by @a norm and @a p. However, if
+#   the point is on or in front of the plane, or the line is parallel to
+#   the plane, the original point will be returned.
+#
+#   @param point    The point to be projected onto the plane.
+#   @param dir      The vector along which the point will be projected.
+#   @param norm     The normal of the plane onto which the point will be
+#                   projected.
+#   @param p        A point through which the plane passes.
+#   @return         A vector representing the projected point, or the
+#                   original point.
 def project_point(point, dir, norm, p):
     d = (point - p).dot(norm)
     if d >= 0:
@@ -149,6 +198,20 @@ def calc_edge_vert_planes(edges, edge):
         for ed in v.edges:
             v.planes.append (calc_plane_normal(edge, edges[ed]))
 
+##  Make a cylinder with ends clipped to the end-planes of the edge.
+#
+#   The strut is just a single quad representing the Z axis of the edge.
+#
+#   @param mesh     The base mesh. Used for finding the edge vertices.
+#   @param edge_num The number of the current edge. For the face vertex
+#                   indices.
+#   @param edge     The edge for which the strut will be built.
+#   @param od       The diameter of the strut.
+#   @return         A tuple containing a list of vertices and a list of faces.
+#                   The face vertex indices are pre-adjusted by the edge
+#                   number.
+#   @fixme          The face vertex indices should be accurate for the local
+#                   vertices (consistency)
 def make_clipped_cylinder(mesh, edge_num, edge, od):
     n = len(cossin)
     cyl = [None] * n
