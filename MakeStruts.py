@@ -264,9 +264,18 @@ class SVert:
 
 ##  Represent an edge in the base mesh, with additional information.
 #
+#   Edges do not share vertices so that the edge is always on the front (back?
+#   must verify) side of all the planes attached to its vertices. If the
+#   vertices were shared, the edge could be on either side of the planes, and
+#   there would be planes attached to the vertex that are irrelevant to the
+#   edge.
+#
 #   @var index      The index of the edge in the base mesh.
 #   @var verts      A tuple of 2 SVert vertices, one for each end of the
 #                   edge. The vertices are @b not shared between edges.
+#                   However, if two edges are connected via a vertex in the
+#                   bmesh, their corresponding SVert vertices will have the
+#                   the same index value.
 #   @var x          The x axis of the edges local frame of reference.
 #                   Initially invalid.
 #   @var y          The y axis of the edges local frame of reference.
@@ -331,6 +340,9 @@ def calc_plane_normal(edge1, edge2):
         axis2 = edge2.y
     else:
         raise ValueError("edges not connected")
+    # Both axis1 and axis2 are unit vectors, so this will produce a vector
+    # bisects the two, so long as they are not 180 degrees apart (in which
+    # there are infinite solutions).
     return (axis1 + axis2).normalized()
 
 def make_manifold_struts(truss_obj, od, segments):
@@ -357,9 +369,9 @@ def make_manifold_struts(truss_obj, od, segments):
                     edge.calc_frame(current_edge)
     verts = []
     faces = []
-    for e, edge in enumerate (edges):
+    for e, edge in enumerate(edges):
         #v, f = make_debug_strut(truss_mesh, e, edge, od)
-        edge.calc_vert_planes (edges)
+        edge.calc_vert_planes(edges)
         v, f = make_clipped_cylinder(truss_mesh, e, edge, od)
         verts += v
         faces += f
