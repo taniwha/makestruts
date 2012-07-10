@@ -119,7 +119,7 @@ def project_point(point, dir, norm, p):
         return point
     return point - dir * d / v
 
-def make_debug_plane(mesh, edge_num, edge, od):
+def make_debug_strut(mesh, edge_num, edge, od):
     v = [mesh.verts[edge.verts[0].index].co,
          mesh.verts[edge.verts[1].index].co,
          None, None]
@@ -254,7 +254,7 @@ def make_manifold_struts(truss_obj, od, segments):
     verts = []
     faces = []
     for e, edge in enumerate (edges):
-        #v, f = make_debug_plane(truss_mesh, e, edge, od)
+        #v, f = make_debug_strut(truss_mesh, e, edge, od)
         calc_edge_vert_planes (edges, edge)
         v, f = make_clipped_cylinder(truss_mesh, e, edge, od)
         verts += v
