@@ -271,6 +271,7 @@ class SVert:
 #   edge.
 #
 #   @var index      The index of the edge in the base mesh.
+#   @var bmedge     Cached reference to this edge's bmedge
 #   @var verts      A tuple of 2 SVert vertices, one for each end of the
 #                   edge. The vertices are @b not shared between edges.
 #                   However, if two edges are connected via a vertex in the
@@ -286,6 +287,7 @@ class SVert:
 class SEdge:
     def __init__(self, bmesh, bmedge):
         self.index = bmedge.index
+        self.bmedge = bmedge
         self.verts = (SVert (bmedge.verts[0], bmedge, self),
                       SVert (bmedge.verts[1], bmedge, self))
         self.y = (bmesh.verts[self.verts[0].index].co
@@ -324,6 +326,10 @@ class SEdge:
     def calc_vert_planes(self, edges):
         for v in self.verts:
             v.calc_planes (edges)
+    def bisect_faces(self):
+        n1 = self.bmedge.link_faces[0].normal
+        n2 = self.bmedge.link_faces[1].normal
+        return (n1 + n2).normalized()
 
 def calc_plane_normal(edge1, edge2):
     if edge1.verts[0].index == edge2.verts[0].index:
@@ -349,7 +355,7 @@ def build_edge_frames(edges):
     edge_set = set(edges)
     while edge_set:
         edge_queue=[edge_set.pop()]
-        edge_queue[0].set_frame(select_up(edge_queue[0].y))
+        edge_queue[0].set_frame(edge_queue[0].bisect_faces())
         while edge_queue:
             current_edge = edge_queue.pop()
             for i in (0, 1):
@@ -359,7 +365,7 @@ def build_edge_frames(edges):
                         continue
                     edge_set.remove(edge)
                     edge_queue.append(edge)
-                    edge.calc_frame(current_edge)
+                    edge.set_frame(edge.bisect_faces())
 
 def make_manifold_struts(truss_obj, od, segments):
     bpy.context.scene.objects.active = truss_obj
