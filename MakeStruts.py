@@ -328,8 +328,10 @@ class SEdge:
             v.calc_planes (edges)
     def bisect_faces(self):
         n1 = self.bmedge.link_faces[0].normal
-        n2 = self.bmedge.link_faces[1].normal
-        return (n1 + n2).normalized()
+        if len(self.bmedge.link_faces) > 1:
+            n2 = self.bmedge.link_faces[1].normal
+            return (n1 + n2).normalized()
+        return n1
 
 def calc_plane_normal(edge1, edge2):
     if edge1.verts[0].index == edge2.verts[0].index:
