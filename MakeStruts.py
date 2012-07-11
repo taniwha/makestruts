@@ -345,14 +345,7 @@ def calc_plane_normal(edge1, edge2):
     # there are infinite solutions).
     return (axis1 + axis2).normalized()
 
-def make_manifold_struts(truss_obj, od, segments):
-    bpy.context.scene.objects.active = truss_obj
-    bpy.ops.object.editmode_toggle()
-    truss_mesh = bmesh.from_edit_mesh(truss_obj.data).copy()
-    bpy.ops.object.editmode_toggle()
-    edges = [None] * len(truss_mesh.edges)
-    for i,e in enumerate(truss_mesh.edges):
-        edges[i] = SEdge(truss_mesh, e)
+def build_edge_frames(edges):
     edge_set = set(edges)
     while edge_set:
         edge_queue=[edge_set.pop()]
@@ -367,6 +360,16 @@ def make_manifold_struts(truss_obj, od, segments):
                     edge_set.remove(edge)
                     edge_queue.append(edge)
                     edge.calc_frame(current_edge)
+
+def make_manifold_struts(truss_obj, od, segments):
+    bpy.context.scene.objects.active = truss_obj
+    bpy.ops.object.editmode_toggle()
+    truss_mesh = bmesh.from_edit_mesh(truss_obj.data).copy()
+    bpy.ops.object.editmode_toggle()
+    edges = [None] * len(truss_mesh.edges)
+    for i,e in enumerate(truss_mesh.edges):
+        edges[i] = SEdge(truss_mesh, e)
+    build_edge_frames(edges)
     verts = []
     faces = []
     for e, edge in enumerate(edges):
