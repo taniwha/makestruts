@@ -241,8 +241,8 @@ def make_clipped_cylinder(mesh, edge_num, edge, od):
 #
 #   @var index  The index of the vert in the base mesh
 #   @var edge   The edge to which this vertex is attached.
-#   @var edges  A list of bmesh edges attached to this vert, not including the
-#               edge to which this vertex is attached.
+#   @var edges  A tuple of indicess of edges attached to this vert, not
+#               including the edge to which this vertex is attached.
 #   @var planes List of vectors representing the normals of the planes that
 #               bisect the angle between this vert's edge and each other
 #               adjacant edge.
@@ -332,8 +332,28 @@ class SEdge:
             n2 = self.bmedge.link_faces[1].normal
             return (n1 + n2).normalized()
         return n1
-    def find_edge_frame(self):
-        return self.bisect_faces()
+    def calc_simple_frame(self):
+        return self.y.cross(select_up(self.y)).normalized()
+    def find_edge_frame(self, sedges):
+        if self.bmedge.link_faces:
+            return self.bisect_faces()
+        if self.verts[0].edges or self.verts[1].edges:
+            edges = list(self.verts[0].edges + self.verts[1].edges)
+            for i in range(len(edges)):
+                edges[i] = sedges[edges[i]]
+            while edges and edges[-1].y.cross(self.y).length < 1e-3:
+                edges.pop()
+            if not edges:
+                return self.calc_simple_frame()
+            n1 = edges[-1].y.cross(self.y).normalized()
+            edges.pop()
+            while edges and edges[-1].y.cross(self.y).cross(n1).length < 1e-3:
+                edges.pop()
+            if not edges:
+                return n1
+            n2 = edges[-1].y.cross(self.y).normalized()
+            return (n1 + n2).normalized()
+        return self.calc_simple_frame()
 
 def calc_plane_normal(edge1, edge2):
     if edge1.verts[0].index == edge2.verts[0].index:
@@ -359,7 +379,7 @@ def build_edge_frames(edges):
     edge_set = set(edges)
     while edge_set:
         edge_queue=[edge_set.pop()]
-        edge_queue[0].set_frame(edge_queue[0].find_edge_frame())
+        edge_queue[0].set_frame(edge_queue[0].find_edge_frame(edges))
         while edge_queue:
             current_edge = edge_queue.pop()
             for i in (0, 1):
