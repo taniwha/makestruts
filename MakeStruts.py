@@ -367,7 +367,7 @@ def build_edge_frames(edges):
                         continue
                     edge_set.remove(edge)
                     edge_queue.append(edge)
-                    edge.set_frame(edge.bisect_faces())
+                    edge.calc_frame(current_edge)
 
 def make_manifold_struts(truss_obj, od, segments):
     bpy.context.scene.objects.active = truss_obj
