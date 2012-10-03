@@ -332,6 +332,8 @@ class SEdge:
             n2 = self.bmedge.link_faces[1].normal
             return (n1 + n2).normalized()
         return n1
+    def find_edge_frame(self):
+        return self.bisect_faces()
 
 def calc_plane_normal(edge1, edge2):
     if edge1.verts[0].index == edge2.verts[0].index:
@@ -357,7 +359,7 @@ def build_edge_frames(edges):
     edge_set = set(edges)
     while edge_set:
         edge_queue=[edge_set.pop()]
-        edge_queue[0].set_frame(edge_queue[0].bisect_faces())
+        edge_queue[0].set_frame(edge_queue[0].find_edge_frame())
         while edge_queue:
             current_edge = edge_queue.pop()
             for i in (0, 1):
