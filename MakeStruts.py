@@ -210,9 +210,13 @@ def make_clipped_cylinder(mesh, edge_num, edge, od):
     n = len(cossin)
     cyl = [None] * n
     v0 = mesh.verts[edge.verts[0].index].co
-    c0 = v0 + od * edge.y
+    c0 = v0
+    if len(edge.verts[0].edges) > 1:
+        c0 = v0 + od * edge.y
     v1 = mesh.verts[edge.verts[1].index].co
-    c1 = v1 - od * edge.y
+    c1 = v1
+    if len(edge.verts[1].edges) > 1:
+        c1 = v1 - od * edge.y
     for i in range(n):
         x = cossin[i][0]
         y = cossin[i][1]
