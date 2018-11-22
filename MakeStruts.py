@@ -26,7 +26,7 @@
 bl_info = {
     "name": "Strut Generator",
     "author": "Bill Currie",
-    "blender": (2, 6, 3),
+    "blender": (2, 80, 0),
     "api": 35622,
     "location": "View3D > Add > Mesh > Struts",
     "description": "Add struts meshes based on selected truss meshes",
@@ -128,7 +128,7 @@ def make_strut(v1, v2, id, od, n, solid, loops):
         y = cossin[i][1]
         for j in range(vps):
             p = Vector((pos[j][0], pos[j][1] * x, pos[j][1] * y))
-            p = mat * p
+            p = mat @ p
             verts[i * vps + j] = p + v1
         if i:
             for j in range(fps):
@@ -325,7 +325,7 @@ class SEdge:
             q = Quaternion([baxis.dot (h)] + list(baxis.cross(h)))
             # rotate the base edge's up around the rotation axis (blender
             # quaternion shortcut:)
-            up = q * base_edge.z
+            up = q @ base_edge.z
         self.set_frame(up)
     def calc_vert_planes(self, edges):
         for v in self.verts:
@@ -396,7 +396,7 @@ def build_edge_frames(edges):
                     edge.calc_frame(current_edge)
 
 def make_manifold_struts(truss_obj, od, segments):
-    bpy.context.scene.objects.active = truss_obj
+    bpy.context.view_layer.objects.active = truss_obj
     bpy.ops.object.editmode_toggle()
     truss_mesh = bmesh.from_edit_mesh(truss_obj.data).copy()
     truss_mesh.verts.ensure_lookup_table()
@@ -452,11 +452,12 @@ def create_struts(self, context, id, od, segments, solid, loops, manifold):
     build_cossin(segments)
 
     bpy.context.user_preferences.edit.use_global_undo = False
-    for truss_obj in bpy.context.scene.objects:
-        if not truss_obj.select:
+    objects = bpy.context.scene.objects[:]
+    for truss_obj in objects:
+        if not truss_obj.select_get():
             continue
-        truss_obj.select = False
-        truss_mesh = truss_obj.to_mesh(context.scene, True, 'PREVIEW')
+        truss_obj.select_set(False)
+        truss_mesh = truss_obj.to_mesh(context.depsgraph, True)
         if not truss_mesh.edges:
             continue
         if manifold:
@@ -467,10 +468,10 @@ def create_struts(self, context, id, od, segments, solid, loops, manifold):
         mesh = bpy.data.meshes.new("Struts")
         mesh.from_pydata(verts, [], faces)
         obj = bpy.data.objects.new("Struts", mesh)
-        bpy.context.scene.objects.link(obj)
-        obj.select = True
+        bpy.context.layer_collection.collection.objects.link(obj)
+        obj.select_set(True)
         obj.location = truss_obj.location
-        bpy.context.scene.objects.active = obj
+        bpy.context.view_layer.objects.active = obj
         mesh.update()
     bpy.context.user_preferences.edit.use_global_undo = True
     return {'FINISHED'}
@@ -482,30 +483,30 @@ class Struts(bpy.types.Operator):
     bl_description = """Add one or more struts meshes based on selected truss meshes"""
     bl_options = {'REGISTER', 'UNDO'}
 
-    id = FloatProperty(name = "Inside Diameter",
+    id : FloatProperty(name = "Inside Diameter",
                        description = "diameter of inner surface",
                        min = 0.0,
                        soft_min = 0.0,
                        max = 100,
                        soft_max = 100,
                        default = 0.04)
-    od = FloatProperty(name = "Outside Diameter",
+    od : FloatProperty(name = "Outside Diameter",
                        description = "diameter of outer surface",
                        min = 0.001,
                        soft_min = 0.001,
                        max = 100,
                        soft_max = 100,
                        default = 0.05)
-    manifold = BoolProperty(name="Manifold",
+    manifold : BoolProperty(name="Manifold",
                          description="Connect struts to form a single solid.",
                          default=False)
-    solid = BoolProperty(name="Solid",
+    solid : BoolProperty(name="Solid",
                          description="Create inner surface.",
                          default=False)
-    loops = BoolProperty(name="Loops",
+    loops : BoolProperty(name="Loops",
                          description="Create sub-surf friendly loops.",
                          default=False)
-    segments = IntProperty(name="Segments",
+    segments : IntProperty(name="Segments",
                            description="Number of segments around strut",
                            min=3, soft_min=3,
                            max=64, soft_max=64,
@@ -519,11 +520,11 @@ def menu_func(self, context):
     self.layout.operator(Struts.bl_idname, text = "Struts", icon='PLUGIN')
 
 def register():
-    bpy.utils.register_module(__name__)
-    bpy.types.INFO_MT_mesh_add.append(menu_func)
+    bpy.utils.register_class(Struts)
+    bpy.types.VIEW3D_MT_mesh_add.append(menu_func)
 
 def unregister():
-    bpy.utils.unregister_module(__name__)
+    bpy.utils.unregister_class(Struts)
 
 if __name__ == "__main__":
     register()
