@@ -451,7 +451,7 @@ def make_simple_struts(truss_mesh, id, od, segments, solid, loops):
 def create_struts(self, context, id, od, segments, solid, loops, manifold):
     build_cossin(segments)
 
-    bpy.context.user_preferences.edit.use_global_undo = False
+    bpy.context.preferences.edit.use_global_undo = False
     objects = bpy.context.scene.objects[:]
     for truss_obj in objects:
         if not truss_obj.select_get():
@@ -473,7 +473,7 @@ def create_struts(self, context, id, od, segments, solid, loops, manifold):
         obj.location = truss_obj.location
         bpy.context.view_layer.objects.active = obj
         mesh.update()
-    bpy.context.user_preferences.edit.use_global_undo = True
+    bpy.context.preferences.edit.use_global_undo = True
     return {'FINISHED'}
 
 class Struts(bpy.types.Operator):
