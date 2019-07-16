@@ -457,7 +457,8 @@ def create_struts(self, context, id, od, segments, solid, loops, manifold):
         if not truss_obj.select_get():
             continue
         truss_obj.select_set(False)
-        truss_mesh = truss_obj.to_mesh(context.depsgraph, True)
+        depsgraph = context.evaluated_depsgraph_get()
+        truss_mesh = truss_obj.evaluated_get(depsgraph).to_mesh()
         if not truss_mesh.edges:
             continue
         if manifold:
