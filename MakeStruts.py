@@ -397,11 +397,12 @@ def build_edge_frames(edges):
 
 def make_manifold_struts(truss_obj, od, segments):
     bpy.context.view_layer.objects.active = truss_obj
-    bpy.ops.object.editmode_toggle()
+    current_mode = bpy.context.object.mode
+    bpy.ops.object.mode_set(mode='EDIT', toggle=False)
     truss_mesh = bmesh.from_edit_mesh(truss_obj.data).copy()
     truss_mesh.verts.ensure_lookup_table()
     truss_mesh.edges.ensure_lookup_table()
-    bpy.ops.object.editmode_toggle()
+    bpy.ops.object.mode_set(mode=current_mode, toggle=False)
     edges = [None] * len(truss_mesh.edges)
     for i,e in enumerate(truss_mesh.edges):
         edges[i] = SEdge(truss_mesh, e)
